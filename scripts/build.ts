@@ -1,8 +1,8 @@
-// Builds the Survival Kit into a Module package: manifest.json, icon.svg, and one page, one script and one stylesheet
-// each for the View and the Widget, with Svelte and the SDK bundled in. Run with `npm run build` in this folder; the
+// Builds the Survival Kit into a Module package: manifest.json, icon.svg, the User guide and its images, and one page,
+// one script and one stylesheet each for the View and the Widget, with Svelte and the SDK bundled in. Run with `npm run build` in this folder; the
 // package is written to `dist/`, ready to be zipped or placed in a Modules folder.
 
-import { copyFile, mkdir, rm } from "node:fs/promises";
+import { copyFile, cp, mkdir, rm } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 import esbuildSvelte from "esbuild-svelte";
@@ -35,6 +35,7 @@ export async function buildPackage(out = DIST): Promise<string> {
   }
   await copyFile(at("../manifest.json"), `${out}/manifest.json`);
   await copyFile(at("../icon.svg"), `${out}/icon.svg`);
+  await cp(at("../guide"), `${out}/guide`, { recursive: true });
   return out;
 }
 
