@@ -1,35 +1,25 @@
 <script lang="ts">
+  import { ask } from "../lib/confirmation.svelte.ts";
   import { t } from "../lib/i18n.ts";
-  import { PRIORITIES, type Priority } from "../lib/kit.ts";
-  import { FILTERS, kit, save, ui, type Filter } from "../lib/store.svelte.ts";
+  import { FILTERS, matchesFilter, newId, PRIORITIES, type Filter, type Priority } from "../lib/kit.ts";
+  import { kit, save, ui } from "../lib/store.svelte.ts";
   import Modal from "./Modal.svelte";
-
-  let { confirmDelete }: { confirmDelete: (title: string, message: string) => Promise<boolean> } = $props();
+  import PanelHead from "./PanelHead.svelte";
 
   let newText = $state("");
   let newPriority = $state<Priority>("normal");
+  /** The task being edited; null when its dialog is closed. */
+  let draft = $state<{ id: number; text: string; priority: Priority } | null>(null);
 
-  // ── Task modal (edit) ──
-  let editId = $state<number | null>(null);
-  let editText = $state("");
-  let editPriority = $state<Priority>("normal");
+  let filtered = $derived(kit.tasks.filter((task) => matchesFilter(task, ui.filter)));
 
   const filterLabel = (filter: Filter) =>
     filter === "all" || filter === "todo" || filter === "done" ? t(`filter_${filter}`) : t(`priority_${filter}`);
 
-  let filtered = $derived(
-    kit.tasks.filter((task) => {
-      if (ui.filter === "todo") return !task.done;
-      if (ui.filter === "done") return task.done;
-      if (ui.filter === "all") return true;
-      return task.priority === ui.filter;
-    }),
-  );
-
   function addTask() {
     const text = newText.trim();
     if (!text) return;
-    kit.tasks.unshift({ id: Date.now(), text, priority: newPriority, done: false });
+    kit.tasks.unshift({ id: newId(kit.tasks), text, priority: newPriority, done: false });
     newText = "";
     void save("tasks");
   }
@@ -40,35 +30,25 @@
     void save("tasks");
   }
 
-  function openEdit(id: number) {
-    const task = kit.tasks.find((task) => task.id === id);
-    if (!task) return;
-    editId = id;
-    editText = task.text;
-    editPriority = task.priority;
-  }
-
   function confirmEdit() {
-    const text = editText.trim();
-    const task = kit.tasks.find((task) => task.id === editId);
+    if (!draft) return;
+    const { id, priority } = draft;
+    const text = draft.text.trim();
+    const task = kit.tasks.find((task) => task.id === id);
     if (!text || !task) return;
-    task.text = text;
-    task.priority = editPriority;
-    editId = null;
+    Object.assign(task, { text, priority });
+    draft = null;
     void save("tasks");
   }
 
   async function remove(id: number) {
-    if (!(await confirmDelete(t("confirm_del_task_title"), t("irreversible")))) return;
+    if (!(await ask(t("confirm_del_task_title"), t("irreversible")))) return;
     kit.tasks = kit.tasks.filter((task) => task.id !== id);
     void save("tasks");
   }
 </script>
 
-<div class="sk-panel-head">
-  <h2 class="sk-panel-title">{t("tasks_title")}<span class="sk-accent">.</span></h2>
-  <p class="sk-panel-sub">{t("tasks_subtitle")}</p>
-</div>
+<PanelHead title={t("tasks_title")} subtitle={t("tasks_subtitle")} />
 
 <div class="sk-add-bar">
   <input
@@ -108,8 +88,12 @@
       ></button>
       <span class="sk-task-text">{task.text}</span>
       <span class="sk-task-tag">{t(`priority_${task.priority}`)}</span>
-      <button type="button" class="sk-task-btn" title={t("tasks_edit_title")} aria-label={t("tasks_edit_title")} onclick={() => openEdit(task.id)}
-        >✎</button
+      <button
+        type="button"
+        class="sk-task-btn"
+        title={t("tasks_edit_title")}
+        aria-label={t("tasks_edit_title")}
+        onclick={() => (draft = { id: task.id, text: task.text, priority: task.priority })}>✎</button
       >
       <button type="button" class="sk-task-btn sk-task-btn--del" title={t("delete")} aria-label={t("delete")} onclick={() => remove(task.id)}
         >✕</button
@@ -120,15 +104,17 @@
   {/each}
 </ul>
 
-<Modal open={editId !== null} title={t("tasks_edit_title")} onConfirm={confirmEdit} onClose={() => (editId = null)}>
-  <label for="sk-task-text">{t("tasks_label_text")}</label>
-  <input id="sk-task-text" type="text" bind:value={editText} onkeydown={(event) => event.key === "Enter" && confirmEdit()} />
-  <label for="sk-task-priority">{t("tasks_priority_label")}</label>
-  <select id="sk-task-priority" bind:value={editPriority}>
-    {#each PRIORITIES as priority}
-      <option value={priority}>{t(`priority_${priority}`)}</option>
-    {/each}
-  </select>
+<Modal open={draft !== null} title={t("tasks_edit_title")} onConfirm={confirmEdit} onClose={() => (draft = null)}>
+  {#if draft}
+    <label for="sk-task-text">{t("tasks_label_text")}</label>
+    <input id="sk-task-text" type="text" bind:value={draft.text} onkeydown={(event) => event.key === "Enter" && confirmEdit()} />
+    <label for="sk-task-priority">{t("tasks_priority_label")}</label>
+    <select id="sk-task-priority" bind:value={draft.priority}>
+      {#each PRIORITIES as priority}
+        <option value={priority}>{t(`priority_${priority}`)}</option>
+      {/each}
+    </select>
+  {/if}
 </Modal>
 
 <style>

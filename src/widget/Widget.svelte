@@ -1,13 +1,16 @@
 <script lang="ts">
-  import type { ConnectedModule, Json } from "@tessello/sdk";
+  import type { ConnectedModule } from "@tessello/sdk";
   import { onMount } from "svelte";
   import { t } from "../lib/i18n.ts";
-  import { readLinks, readTasks, withScheme, type Category, type Task } from "../lib/kit.ts";
+  import type { Category, Task } from "../lib/kit.ts";
+  import { kitStorage } from "../lib/storage.ts";
 
   let { host }: { host: ConnectedModule } = $props();
 
+  const storage = $derived(kitStorage(host.storage));
+
   let tasks = $state<Task[]>([]);
-  let links = $state<Category[]>([]);
+  let categories = $state<Category[]>([]);
   let loaded = $state(false);
   let error = $state("");
 
@@ -16,9 +19,7 @@
 
   async function refresh() {
     try {
-      const [storedTasks, storedLinks] = await Promise.all([host.storage.get("tasks"), host.storage.get("links")]);
-      tasks = readTasks(storedTasks);
-      links = readLinks(storedLinks);
+      ({ tasks, categories } = await storage.read("tasks", "categories"));
       loaded = true;
       error = "";
     } catch {
@@ -29,14 +30,13 @@
   /** Reads the tasks again before writing them, so that a change made in the View meanwhile is kept. */
   async function check(id: number) {
     try {
-      const latest = readTasks(await host.storage.get("tasks"));
+      const latest = (await storage.read("tasks")).tasks;
       const task = latest.find((task) => task.id === id);
       if (task) task.done = true;
-      await host.storage.set("tasks", latest as unknown as Json[]);
+      await storage.write({ tasks: latest });
       tasks = latest;
     } catch (failure) {
-      const code = (failure as { code?: unknown }).code;
-      error = code === "quota_exceeded" ? t("save_error_quota") : t("save_error", { reason: (failure as Error).message });
+      error = (failure as Error).message;
     }
   }
 
@@ -75,12 +75,12 @@
     </ul>
 
     <div class="links">
-      {#each links as category, index (index)}
-        <section class={category.theme} aria-label={category.titre}>
-          <h2>{category.titre}</h2>
+      {#each categories as category, index (index)}
+        <section class="color-{category.color}" aria-label={category.title}>
+          <h2>{category.title}</h2>
           <ul>
-            {#each category.liens as link}
-              <li><a href={withScheme(link.url)} target="_blank" rel="noopener noreferrer">{link.nom}</a></li>
+            {#each category.links as link}
+              <li><a href={link.url} target="_blank" rel="noopener noreferrer">{link.name}</a></li>
             {/each}
           </ul>
         </section>
@@ -204,7 +204,7 @@
     font-weight: 600;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: var(--sk-theme-ink);
+    color: var(--color-ink);
   }
   .links ul {
     display: flex;
@@ -216,7 +216,7 @@
     max-width: 100%;
     padding: 1px 8px;
     border-radius: 999px;
-    background: var(--sk-theme-soft);
+    background: var(--color-soft);
     color: var(--ink);
     text-decoration: none;
     white-space: nowrap;

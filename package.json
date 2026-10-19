@@ -1,6 +1,6 @@
 {
   "name": "@tessello/survival-kit",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "description": "Survival Kit: tasks, notes and links on one screen, as a Tessello Module.",
   "type": "module",

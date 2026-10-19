@@ -1,6 +1,8 @@
 // The English and French catalogs of the original Survival Kit, plus the messages of what the Module adds.
 // The language follows the `locale` of the handshake; English is the default.
 
+import type { Color } from "./kit.ts";
+
 const en = {
   title: "Survival Kit",
   subtitle: "tasks, notes & links — your dashboard",
@@ -243,5 +245,5 @@ export function t(key: MessageKey, values: Record<string, string | number> = {})
   return messages[key].replace(/\{(\w+)\}/g, (match, name: string) => (name in values ? String(values[name]) : match));
 }
 
-/** The name of one of the six colors, such as "t-sky". */
-export const colorLabel = (theme: string): string => t(`color_${theme.slice(2)}` as MessageKey);
+/** The name of one of the six colors of notes and categories. */
+export const colorLabel = (color: Color): string => t(`color_${color}`);

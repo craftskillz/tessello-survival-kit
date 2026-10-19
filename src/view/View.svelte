@@ -1,25 +1,14 @@
 <script lang="ts">
+  import { ask } from "../lib/confirmation.svelte.ts";
   import { t } from "../lib/i18n.ts";
   import { readKit, type Kit } from "../lib/kit.ts";
   import { load, replaceKit, status } from "../lib/store.svelte.ts";
+  import ConfirmDialog from "./ConfirmDialog.svelte";
   import LinksPanel from "./LinksPanel.svelte";
-  import Modal from "./Modal.svelte";
   import NotesPanel from "./NotesPanel.svelte";
   import TasksPanel from "./TasksPanel.svelte";
 
-  // ── Confirmation dialog, shared by every deletion and by the import ──
-  let confirmation = $state<{ title: string; message: string; label: string; resolve: (ok: boolean) => void } | null>(null);
-
-  function ask(title: string, message: string, label = t("delete")): Promise<boolean> {
-    return new Promise((resolve) => (confirmation = { title, message, label, resolve }));
-  }
-  function answer(ok: boolean) {
-    confirmation?.resolve(ok);
-    confirmation = null;
-  }
-  const confirmDelete = (title: string, message: string) => ask(title, message);
-
-  // ── Import of a .survival-kit.json ──
+  // ── Import of a .survival-kit.json, which replaces the whole kit ──
   let fileInput = $state<HTMLInputElement>();
   let importError = $state("");
 
@@ -35,7 +24,7 @@
       importError = t("import_invalid", { file: file.name });
       return;
     }
-    const message = t("import_msg", { tasks: imported.tasks.length, notes: imported.notes.length, categories: imported.links.length });
+    const message = t("import_msg", { tasks: imported.tasks.length, notes: imported.notes.length, categories: imported.categories.length });
     if (await ask(t("import_title"), message, t("import_confirm"))) await replaceKit(imported);
   }
 </script>
@@ -50,18 +39,14 @@
     <input bind:this={fileInput} type="file" accept=".json,application/json" hidden onchange={importFile} />
   </header>
 
-  {#if status.saveError}
+  {#snippet banner(message: string, dismiss: () => void)}
     <p class="sk-banner" role="alert">
-      <span>{status.saveError}</span>
-      <button type="button" class="sk-tool" onclick={() => (status.saveError = "")}>{t("dismiss")}</button>
+      <span>{message}</span>
+      <button type="button" class="sk-tool" onclick={dismiss}>{t("dismiss")}</button>
     </p>
-  {/if}
-  {#if importError}
-    <p class="sk-banner" role="alert">
-      <span>{importError}</span>
-      <button type="button" class="sk-tool" onclick={() => (importError = "")}>{t("dismiss")}</button>
-    </p>
-  {/if}
+  {/snippet}
+  {#if status.saveError}{@render banner(status.saveError, () => (status.saveError = ""))}{/if}
+  {#if importError}{@render banner(importError, () => (importError = ""))}{/if}
 
   {#if status.loadError}
     <div class="sk-blocked" role="alert">
@@ -72,23 +57,14 @@
     <p class="sk-loading">{t("loading")}</p>
   {:else}
     <main class="sk-grid">
-      <section class="sk-col" aria-label={t("tasks_title")}><div class="sk-inner"><TasksPanel {confirmDelete} /></div></section>
-      <section class="sk-col" aria-label={t("notes_title")}><div class="sk-inner"><NotesPanel {confirmDelete} /></div></section>
-      <section class="sk-col" aria-label={t("links_title")}><div class="sk-inner"><LinksPanel {confirmDelete} /></div></section>
+      <section class="sk-col" aria-label={t("tasks_title")}><div class="sk-inner"><TasksPanel /></div></section>
+      <section class="sk-col" aria-label={t("notes_title")}><div class="sk-inner"><NotesPanel /></div></section>
+      <section class="sk-col" aria-label={t("links_title")}><div class="sk-inner"><LinksPanel /></div></section>
     </main>
   {/if}
 </div>
 
-<Modal
-  open={confirmation !== null}
-  title={confirmation?.title}
-  confirmLabel={confirmation?.label}
-  danger
-  onConfirm={() => answer(true)}
-  onClose={() => answer(false)}
->
-  <p>{confirmation?.message}</p>
-</Modal>
+<ConfirmDialog />
 
 <style>
   .sk-root {

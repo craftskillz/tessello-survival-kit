@@ -40,19 +40,19 @@ body {
 }
 
 /* ── The six colors of notes and categories, light then dark ─────────────── */
-.t-green  { --sk-theme-soft: #dcfce7; --sk-theme-ink: #047857; }
-.t-violet { --sk-theme-soft: #ede9fe; --sk-theme-ink: #6d28d9; }
-.t-amber  { --sk-theme-soft: #fef3c7; --sk-theme-ink: #b45309; }
-.t-sky    { --sk-theme-soft: #e0f2fe; --sk-theme-ink: #0369a1; }
-.t-rose   { --sk-theme-soft: #ffe4e6; --sk-theme-ink: #be123c; }
-.t-teal   { --sk-theme-soft: #ccfbf1; --sk-theme-ink: #0f766e; }
+.color-green  { --color-soft: #dcfce7; --color-ink: #047857; }
+.color-violet { --color-soft: #ede9fe; --color-ink: #6d28d9; }
+.color-amber  { --color-soft: #fef3c7; --color-ink: #b45309; }
+.color-sky    { --color-soft: #e0f2fe; --color-ink: #0369a1; }
+.color-rose   { --color-soft: #ffe4e6; --color-ink: #be123c; }
+.color-teal   { --color-soft: #ccfbf1; --color-ink: #0f766e; }
 
-.dark .t-green  { --sk-theme-soft: rgb(4 120 87 / 18%);   --sk-theme-ink: #6ee7b7; }
-.dark .t-violet { --sk-theme-soft: rgb(109 40 217 / 22%); --sk-theme-ink: #c4b5fd; }
-.dark .t-amber  { --sk-theme-soft: rgb(180 83 9 / 20%);   --sk-theme-ink: #fcd34d; }
-.dark .t-sky    { --sk-theme-soft: rgb(3 105 161 / 22%);  --sk-theme-ink: #7dd3fc; }
-.dark .t-rose   { --sk-theme-soft: rgb(190 18 60 / 20%);  --sk-theme-ink: #fda4af; }
-.dark .t-teal   { --sk-theme-soft: rgb(15 118 110 / 22%); --sk-theme-ink: #5eead4; }
+.dark .color-green  { --color-soft: rgb(4 120 87 / 18%);   --color-ink: #6ee7b7; }
+.dark .color-violet { --color-soft: rgb(109 40 217 / 22%); --color-ink: #c4b5fd; }
+.dark .color-amber  { --color-soft: rgb(180 83 9 / 20%);   --color-ink: #fcd34d; }
+.dark .color-sky    { --color-soft: rgb(3 105 161 / 22%);  --color-ink: #7dd3fc; }
+.dark .color-rose   { --color-soft: rgb(190 18 60 / 20%);  --color-ink: #fda4af; }
+.dark .color-teal   { --color-soft: rgb(15 118 110 / 22%); --color-ink: #5eead4; }
 
 /* ── Tasks tinted by priority: red for Urgent, green for Normal, gray for Later ── */
 .sk-task--urgent { --sk-color: #e11d48; --sk-border: #fda4af; --sk-bg: rgb(255 228 230 / 85%); --sk-tag-bg: rgb(255 205 211 / 90%); --sk-tag-fg: #be123c; }
@@ -93,36 +93,7 @@ body {
   justify-content: center;
 }
 
-/* ── Panels ────────────────────────────────────────────────────────────────── */
-.sk-panel-head {
-  margin-bottom: 36px;
-}
-.sk-panel-title {
-  margin: 0;
-  font-size: 2.2rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1;
-}
-/* The signature orange dot of the original kit. */
-.sk-accent {
-  color: #f97316;
-}
-.sk-panel-sub {
-  margin: 8px 0 0;
-  font-family: var(--mono);
-  font-size: 0.7rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-.sk-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 16px;
-}
+/* ── The buttons of the toolbars, in the View and its panels ───────────────── */
 .sk-tool {
   font-size: 11px;
   padding: 5px 11px;
@@ -149,58 +120,11 @@ body {
   background: var(--accent-soft);
 }
 
-/* Note and category cards. */
+/* Notes and categories (view/Card.svelte). */
 .sk-cards {
   display: flex;
   flex-direction: column;
   gap: 12px;
-}
-.sk-card {
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  overflow: hidden;
-  background: var(--panel);
-}
-.sk-card-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  background: var(--sk-theme-soft);
-  border-bottom: 1px solid var(--line);
-}
-.sk-card.collapsed .sk-card-head {
-  border-bottom: none;
-}
-.sk-card-head h3 {
-  flex: 1;
-  min-width: 0;
-  margin: 0;
-  font-family: var(--mono);
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--sk-theme-ink);
-  overflow-wrap: anywhere;
-}
-.sk-card-body {
-  padding: 12px 14px;
-}
-.sk-card.collapsed .sk-card-body {
-  display: none;
-}
-.sk-toggle {
-  border: none;
-  background: transparent;
-  color: var(--muted);
-  cursor: pointer;
-  display: flex;
-  padding: 4px;
-  transition: transform 0.15s;
-}
-.sk-card:not(.collapsed) .sk-toggle {
-  transform: rotate(180deg);
 }
 
 /* The controls shown only in edit mode. */

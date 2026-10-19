@@ -1,227 +1,197 @@
 <script lang="ts">
+  import { ask } from "../lib/confirmation.svelte.ts";
   import { colorLabel, t } from "../lib/i18n.ts";
-  import { THEMES, withScheme, type Theme } from "../lib/kit.ts";
+  import { COLORS, withScheme, type Color } from "../lib/kit.ts";
   import { kit, save } from "../lib/store.svelte.ts";
+  import Card from "./Card.svelte";
+  import CardsToolbar from "./CardsToolbar.svelte";
   import Modal from "./Modal.svelte";
-
-  let { confirmDelete }: { confirmDelete: (title: string, message: string) => Promise<boolean> } = $props();
+  import PanelHead from "./PanelHead.svelte";
 
   let editMode = $state(false);
-  // Keyed by category name, as in the original: categories with the same name expand together.
+  // Keyed by category title, as in the original: categories with the same title expand together.
   let expanded = $state<Record<string, boolean>>({});
+  let allExpanded = $derived(kit.categories.length > 0 && kit.categories.every((category) => expanded[category.title]));
 
-  // ── Category modal (add or edit) ──
-  let catOpen = $state(false);
-  let catIdx = $state(-1); // -1 = adding
-  let catName = $state("");
-  let catTheme = $state<Theme>("t-green");
-
-  // ── Link modal (add or edit) ──
-  let linkOpen = $state(false);
-  let linkCatIdx = $state(-1);
-  let linkIdx = $state(-1); // -1 = adding
-  let linkNom = $state("");
-  let linkDesc = $state("");
-  let linkUrl = $state("");
-
-  let allExpanded = $derived(kit.links.length > 0 && kit.links.every((category) => expanded[category.titre]));
+  /** The category being added (`index: null`) or edited; null when its dialog is closed. */
+  let categoryDraft = $state<{ index: number | null; title: string; color: Color } | null>(null);
+  /** The link being added (`index: null`) or edited in a category; null when its dialog is closed. */
+  let linkDraft = $state<{ categoryIndex: number; index: number | null; name: string; description: string; url: string } | null>(null);
 
   function toggleAll() {
-    expanded = allExpanded ? {} : Object.fromEntries(kit.links.map((category) => [category.titre, true]));
+    expanded = allExpanded ? {} : Object.fromEntries(kit.categories.map((category) => [category.title, true]));
   }
 
-  // ── Category CRUD ──
-  function openAddCat() {
-    catIdx = -1;
-    catName = "";
-    catTheme = "t-green";
-    catOpen = true;
-  }
-  function openEditCat(index: number) {
-    catIdx = index;
-    catName = kit.links[index].titre;
-    catTheme = kit.links[index].theme;
-    catOpen = true;
-  }
-  function confirmCat() {
-    const titre = catName.trim();
-    if (!titre) return;
-    if (catIdx === -1) {
-      kit.links.push({ theme: catTheme, titre, liens: [] });
+  function confirmCategory() {
+    if (!categoryDraft) return;
+    const title = categoryDraft.title.trim();
+    if (!title) return;
+    if (categoryDraft.index === null) {
+      kit.categories.push({ color: categoryDraft.color, title, links: [] });
     } else {
-      const category = kit.links[catIdx];
-      if (expanded[category.titre]) expanded[titre] = true;
-      Object.assign(category, { titre, theme: catTheme });
+      const category = kit.categories[categoryDraft.index];
+      if (expanded[category.title]) expanded[title] = true;
+      Object.assign(category, { title, color: categoryDraft.color });
     }
-    catOpen = false;
-    void save("links");
-  }
-  async function deleteCat(index: number) {
-    if (!(await confirmDelete(t("confirm_del_cat_title"), t("confirm_del_cat_msg")))) return;
-    kit.links.splice(index, 1);
-    void save("links");
+    categoryDraft = null;
+    void save("categories");
   }
 
-  // ── Link CRUD ──
-  function openAddLink(categoryIdx: number) {
-    linkCatIdx = categoryIdx;
-    linkIdx = -1;
-    linkNom = linkDesc = linkUrl = "";
-    linkOpen = true;
+  async function deleteCategory(index: number) {
+    if (!(await ask(t("confirm_del_cat_title"), t("confirm_del_cat_msg")))) return;
+    kit.categories.splice(index, 1);
+    void save("categories");
   }
-  function openEditLink(event: Event, categoryIdx: number, index: number) {
+
+  /** The buttons of a link row sit inside its <a>: a click on them must not open the link. */
+  function editLink(event: Event, categoryIndex: number, index: number) {
     event.preventDefault();
-    const link = kit.links[categoryIdx].liens[index];
-    linkCatIdx = categoryIdx;
-    linkIdx = index;
-    linkNom = link.nom;
-    linkDesc = link.desc;
-    linkUrl = link.url;
-    linkOpen = true;
+    const { name, description, url } = kit.categories[categoryIndex].links[index];
+    linkDraft = { categoryIndex, index, name, description, url };
   }
+
   function confirmLink() {
-    const nom = linkNom.trim();
-    const url = linkUrl.trim();
-    const category = kit.links[linkCatIdx];
-    if (!nom || !url || !category) return;
-    const link = { nom, desc: linkDesc.trim(), url: withScheme(url) };
-    if (linkIdx === -1) category.liens.push(link);
-    else category.liens[linkIdx] = link;
-    linkOpen = false;
-    void save("links");
+    if (!linkDraft) return;
+    const name = linkDraft.name.trim();
+    const url = linkDraft.url.trim();
+    const category = kit.categories[linkDraft.categoryIndex];
+    if (!name || !url || !category) return;
+    const link = { name, description: linkDraft.description.trim(), url: withScheme(url) };
+    if (linkDraft.index === null) category.links.push(link);
+    else category.links[linkDraft.index] = link;
+    linkDraft = null;
+    void save("categories");
   }
-  async function deleteLink(event: Event, categoryIdx: number, index: number) {
+
+  async function deleteLink(event: Event, categoryIndex: number, index: number) {
     event.preventDefault();
-    if (!(await confirmDelete(t("confirm_del_link_title"), t("irreversible")))) return;
-    kit.links[categoryIdx].liens.splice(index, 1);
-    void save("links");
+    if (!(await ask(t("confirm_del_link_title"), t("irreversible")))) return;
+    kit.categories[categoryIndex].links.splice(index, 1);
+    void save("categories");
   }
 </script>
 
-<div class="sk-panel-head">
-  <h2 class="sk-panel-title">{t("links_title")}<span class="sk-accent">.</span></h2>
-  <p class="sk-panel-sub">{t("links_subtitle")}</p>
-</div>
+<PanelHead title={t("links_title")} subtitle={t("links_subtitle")} />
 
-<div class="sk-toolbar">
-  <button type="button" class="sk-tool" onclick={() => (editMode = !editMode)}>
-    {editMode ? t("read_mode") : t("edit_mode")}
-  </button>
-  <button type="button" class="sk-tool" onclick={toggleAll}>
-    {allExpanded ? t("collapse_all") : t("expand_all")}
-  </button>
-  <button type="button" class="sk-tool sk-tool--add" onclick={openAddCat}>{t("links_btn_add_cat")}</button>
-</div>
+<CardsToolbar
+  bind:editMode
+  {allExpanded}
+  onToggleAll={toggleAll}
+  addLabel={t("links_btn_add_cat")}
+  onAdd={() => (categoryDraft = { index: null, title: "", color: "green" })}
+/>
 
 <div class="sk-cards" class:edit-mode={editMode}>
-  {#each kit.links as category, index (index)}
-    {@const collapsed = !expanded[category.titre]}
-    <section class="sk-card {category.theme}" class:collapsed aria-label={category.titre}>
-      <div class="sk-card-head">
-        <h3>{category.titre}</h3>
-        <div class="sk-edit-only">
-          <button type="button" class="sk-mini" title={t("links_add_link_title")} aria-label={t("links_add_link_title")} onclick={() => openAddLink(index)}
-            >＋</button
-          >
-          <button type="button" class="sk-mini" title={t("links_edit_cat_title")} aria-label={t("links_edit_cat_title")} onclick={() => openEditCat(index)}
-            >✎</button
-          >
-          <button
-            type="button"
-            class="sk-mini sk-mini--del"
-            title={t("links_del_cat_title")}
-            aria-label={t("links_del_cat_title")}
-            onclick={() => deleteCat(index)}>✕</button
-          >
-        </div>
+  {#each kit.categories as category, index (index)}
+    <Card
+      title={category.title}
+      color={category.color}
+      expanded={!!expanded[category.title]}
+      onToggle={() => (expanded[category.title] = !expanded[category.title])}
+      flush
+    >
+      {#snippet actions()}
         <button
           type="button"
-          class="sk-toggle"
-          aria-label={t("toggle")}
-          aria-expanded={!collapsed}
-          onclick={() => (expanded[category.titre] = !expanded[category.titre])}
+          class="sk-mini"
+          title={t("links_add_link_title")}
+          aria-label={t("links_add_link_title")}
+          onclick={() => (linkDraft = { categoryIndex: index, index: null, name: "", description: "", url: "" })}>＋</button
         >
-          <svg viewBox="0 0 10 6" width="10" height="6"
-            ><path d="M1 1 L5 5 L9 1" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" /></svg
-          >
-        </button>
-      </div>
-      <div class="sk-card-body sk-links">
-        {#each category.liens as link, linkIndex}
-          <a href={withScheme(link.url)} target="_blank" rel="noopener noreferrer" class="sk-link">
-            <span class="sk-link-text">
-              <span class="sk-link-name">{link.nom}</span>{#if link.desc}<span class="sk-link-desc">{` — ${link.desc}`}</span>{/if}
-            </span>
-            <span class="sk-arrow" aria-hidden="true">↗</span>
-            <span class="sk-edit-only">
-              <button
-                type="button"
-                class="sk-mini"
-                title={t("links_edit_link_title")}
-                aria-label={t("links_edit_link_title")}
-                onclick={(event) => openEditLink(event, index, linkIndex)}>✎</button
-              >
-              <button
-                type="button"
-                class="sk-mini sk-mini--del"
-                title={t("links_del_link_title")}
-                aria-label={t("links_del_link_title")}
-                onclick={(event) => deleteLink(event, index, linkIndex)}>✕</button
-              >
-            </span>
-          </a>
-        {/each}
-      </div>
-    </section>
+        <button
+          type="button"
+          class="sk-mini"
+          title={t("links_edit_cat_title")}
+          aria-label={t("links_edit_cat_title")}
+          onclick={() => (categoryDraft = { index, title: category.title, color: category.color })}>✎</button
+        >
+        <button
+          type="button"
+          class="sk-mini sk-mini--del"
+          title={t("links_del_cat_title")}
+          aria-label={t("links_del_cat_title")}
+          onclick={() => deleteCategory(index)}>✕</button
+        >
+      {/snippet}
+      {#each category.links as link, linkIndex}
+        <a href={link.url} target="_blank" rel="noopener noreferrer" class="sk-link">
+          <span class="sk-link-text">
+            <span class="sk-link-name">{link.name}</span>{#if link.description}<span class="sk-link-desc">{` — ${link.description}`}</span>{/if}
+          </span>
+          <span class="sk-arrow" aria-hidden="true">↗</span>
+          <span class="sk-edit-only">
+            <button
+              type="button"
+              class="sk-mini"
+              title={t("links_edit_link_title")}
+              aria-label={t("links_edit_link_title")}
+              onclick={(event) => editLink(event, index, linkIndex)}>✎</button
+            >
+            <button
+              type="button"
+              class="sk-mini sk-mini--del"
+              title={t("links_del_link_title")}
+              aria-label={t("links_del_link_title")}
+              onclick={(event) => deleteLink(event, index, linkIndex)}>✕</button
+            >
+          </span>
+        </a>
+      {/each}
+    </Card>
   {:else}
     <p class="sk-empty">{t("links_empty")}</p>
   {/each}
 </div>
 
 <Modal
-  open={catOpen}
-  title={catIdx === -1 ? t("modal_cat_title") : t("links_edit_cat_title")}
-  confirmLabel={catIdx === -1 ? t("add") : t("save")}
-  onConfirm={confirmCat}
-  onClose={() => (catOpen = false)}
+  open={categoryDraft !== null}
+  title={categoryDraft?.index === null ? t("modal_cat_title") : t("links_edit_cat_title")}
+  confirmLabel={categoryDraft?.index === null ? t("add") : t("save")}
+  onConfirm={confirmCategory}
+  onClose={() => (categoryDraft = null)}
 >
-  <label for="sk-cat-name">{t("modal_cat_label_name")}</label>
-  <input
-    id="sk-cat-name"
-    type="text"
-    bind:value={catName}
-    placeholder={t("modal_cat_placeholder_name")}
-    onkeydown={(event) => event.key === "Enter" && confirmCat()}
-  />
-  <label for="sk-cat-color">{t("label_color")}</label>
-  <select id="sk-cat-color" bind:value={catTheme}>
-    {#each THEMES as theme}
-      <option value={theme}>{colorLabel(theme)}</option>
-    {/each}
-  </select>
+  {#if categoryDraft}
+    <label for="sk-category-title">{t("modal_cat_label_name")}</label>
+    <input
+      id="sk-category-title"
+      type="text"
+      bind:value={categoryDraft.title}
+      placeholder={t("modal_cat_placeholder_name")}
+      onkeydown={(event) => event.key === "Enter" && confirmCategory()}
+    />
+    <label for="sk-category-color">{t("label_color")}</label>
+    <select id="sk-category-color" bind:value={categoryDraft.color}>
+      {#each COLORS as color}
+        <option value={color}>{colorLabel(color)}</option>
+      {/each}
+    </select>
+  {/if}
 </Modal>
 
 <Modal
-  open={linkOpen}
-  title={linkIdx === -1 ? t("modal_link_title") : t("links_edit_link_title")}
-  confirmLabel={linkIdx === -1 ? t("add") : t("save")}
+  open={linkDraft !== null}
+  title={linkDraft?.index === null ? t("modal_link_title") : t("links_edit_link_title")}
+  confirmLabel={linkDraft?.index === null ? t("add") : t("save")}
   onConfirm={confirmLink}
-  onClose={() => (linkOpen = false)}
+  onClose={() => (linkDraft = null)}
 >
-  <label for="sk-link-nom">{t("modal_link_label_name")}</label>
-  <input id="sk-link-nom" type="text" bind:value={linkNom} placeholder={t("modal_link_placeholder_name")} />
-  <label for="sk-link-desc">{t("modal_link_label_desc")}</label>
-  <input id="sk-link-desc" type="text" bind:value={linkDesc} placeholder={t("modal_link_placeholder_desc")} />
-  <label for="sk-link-url">{t("modal_link_label_url")}</label>
-  <input id="sk-link-url" type="text" bind:value={linkUrl} placeholder="https://…" onkeydown={(event) => event.key === "Enter" && confirmLink()} />
+  {#if linkDraft}
+    <label for="sk-link-name">{t("modal_link_label_name")}</label>
+    <input id="sk-link-name" type="text" bind:value={linkDraft.name} placeholder={t("modal_link_placeholder_name")} />
+    <label for="sk-link-description">{t("modal_link_label_desc")}</label>
+    <input id="sk-link-description" type="text" bind:value={linkDraft.description} placeholder={t("modal_link_placeholder_desc")} />
+    <label for="sk-link-url">{t("modal_link_label_url")}</label>
+    <input
+      id="sk-link-url"
+      type="text"
+      bind:value={linkDraft.url}
+      placeholder="https://…"
+      onkeydown={(event) => event.key === "Enter" && confirmLink()}
+    />
+  {/if}
 </Modal>
 
 <style>
-  .sk-links {
-    display: flex;
-    flex-direction: column;
-    padding: 0;
-  }
   .sk-link {
     display: flex;
     align-items: center;

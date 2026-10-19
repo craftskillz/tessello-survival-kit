@@ -2,7 +2,7 @@
   "convention": 1,
   "id": "@tessello/survival-kit",
   "name": "Survival Kit",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Your tasks, notes and links on one screen: everything you have to do, remember and not lose.",
   "icon": "icon.svg",
   "view": {
