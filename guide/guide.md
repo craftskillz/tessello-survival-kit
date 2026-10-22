@@ -176,7 +176,7 @@ A file that is not a Survival Kit is refused, and your kit stays as it was. Part
 
 ## Your data
 
-- **Where it is.** Your kit is kept in your **Modules folder**, on your computer, in `.tessello/data/@tessello/survival-kit/`. There is one file for each panel: `tasks.json`, `notes.json` and `links.json`. Nothing is sent anywhere: the Survival Kit asks for no Permission and cannot reach the network.
+- **Where it is.** Your kit is kept in your **Modules folder**, on your computer, in `.tessello/data/@craftskillz/survival-kit/`. There is one file for each panel: `tasks.json`, `notes.json` and `links.json`. Nothing is sent anywhere: the Survival Kit asks for no Permission and cannot reach the network.
 - **The View and the Widget share it.** A task checked in the Widget is done in the kit, and the other way round. Each one reads the kit again whenever it comes back on screen.
 - **Saving.** Every change is saved at once. If a change cannot be saved, the kit tells you (see below).
 - **Backups and history.** Your Modules folder is an ordinary folder, so you can back it up or version it with git to keep the history of your kit. If your notes hold secrets, such as tokens or passwords, keep `.tessello/data/` out of anything you share.
