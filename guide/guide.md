@@ -210,3 +210,7 @@ A file that is not a Survival Kit is refused, and your kit stays as it was. Part
 - Keep **Urgent** for what really is urgent: those are the tasks the Widget puts in front of you on the Home.
 - A note with a **Code** block of your most used commands, and a **Table** of your local ports, saves many searches.
 - Nothing can be reordered yet. New tasks go to the top, and new notes, blocks, categories and links go to the end.
+
+## About Survival Kit
+
+Survival Kit is a Module of [Tessello](https://github.com/craftskillz/tessello), published by @craftskillz under the MIT license. Its sources, its versions and its issues are at https://github.com/craftskillz/tessello-survival-kit.
